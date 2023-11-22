@@ -1,6 +1,6 @@
 use image::{
-    imageops::{overlay, FilterType},
-    DynamicImage, Rgba,
+    imageops::{overlay, resize, FilterType},
+    GenericImage, GenericImageView, Pixel,
 };
 use rusttype::{point, Font, GlyphId, PositionedGlyph, Rect, Scale};
 use std::{cmp::max, future::Future};
@@ -23,7 +23,7 @@ impl<'a> Fonts<'a> {
             .find(|f| f.glyph(char).id() != GlyphId(0))
             .or(self.fonts.last())
     }
-
+    #[inline(always)]
     pub fn layout_glyphs(
         scale: Scale,
         font: &Font,
@@ -44,18 +44,22 @@ impl<'a> Fonts<'a> {
         (w, h)
     }
 
-    pub fn write_char(
+    #[inline(always)]
+    pub fn write_char<C: Canvas>(
         &self,
-        img: &mut DynamicImage,
+        img: &mut C,
         char: char,
         scale: Scale,
-        color: Rgba<u8>,
+        color: C::Pixel,
         image_width: i32,
         image_height: i32,
         x: i32,
         y: i32,
         font: &Font,
-    ) -> i32 {
+    ) -> i32
+    where
+        C::Pixel: Pixel<Subpixel = u8>,
+    {
         Self::layout_glyphs(scale, font, char, |pos, bb| {
             pos.draw(|gx, gy, gv| {
                 let gx = gx as i32 + bb.min.x;
@@ -95,39 +99,43 @@ impl<'a> Fonts<'a> {
         (width, height)
     }
 
-    pub async fn write_to_middle<'b, Fut, Fut2>(
+    pub async fn write_to_middle<'b, C: Canvas + GenericImage, Fut, Fut2>(
         &self,
-        img: &mut DynamicImage,
+        img: &mut C,
         text: &'b str,
         scale: Scale,
-        color: Rgba<u8>,
+        color: <C as Canvas>::Pixel,
         width: i32,
         mut x: i32,
         y: i32,
         resolver: impl Fn(&'b str) -> Fut,
         text_size_resolver: impl Fn(&'b str) -> Fut2,
     ) where
-        Fut: Future<Output = Vec<StrOrImg<'a>>>,
+        Fut: Future<Output = Vec<StrOrImg<'a, C>>>,
         Fut2: Future<Output = &'b str>,
+        <C as Canvas>::Pixel: Pixel<Subpixel = u8>,
+        <C as GenericImageView>::Pixel: 'static,
     {
         x = x + (width - self.text_size(text, scale, text_size_resolver).await.0) / 2;
         self.write_to(img, text, scale, color, x, y, resolver).await;
     }
 
-    pub async fn write_to<'b, Fut>(
+    pub async fn write_to<'b, C: Canvas + GenericImage + GenericImageView, Fut>(
         &self,
-        img: &mut DynamicImage,
+        img: &mut C,
         text: &'b str,
         scale: Scale,
-        color: Rgba<u8>,
+        color: <C as Canvas>::Pixel,
         mut x: i32,
         y: i32,
         resolver: impl Fn(&'b str) -> Fut,
     ) where
-        Fut: Future<Output = Vec<StrOrImg<'a>>>,
+        Fut: Future<Output = Vec<StrOrImg<'a, C>>>,
+        <C as Canvas>::Pixel: Pixel<Subpixel = u8>,
+        <C as GenericImageView>::Pixel: 'static,
     {
-        let image_width = img.width() as i32;
-        let image_height = img.height() as i32;
+        let image_width = GenericImageView::width(img) as i32;
+        let image_height = GenericImageView::height(img) as i32;
         let text = resolver(text).await;
         for text in text.iter() {
             match text {
@@ -148,7 +156,8 @@ impl<'a> Fonts<'a> {
                     }
                 }
                 StrOrImg::Img(over) => {
-                    let over = over.resize(
+                    let over = resize(
+                        over,
                         (scale.x * 0.9) as u32,
                         (scale.y * 0.9) as u32,
                         FilterType::Nearest,
@@ -161,11 +170,11 @@ impl<'a> Fonts<'a> {
     }
 }
 
-pub enum StrOrImg<'a> {
+pub enum StrOrImg<'a, C: Canvas> {
     Str(&'a str),
-    Img(DynamicImage),
+    Img(C),
 }
 
-pub async fn empty_resolver<'a>(s: &'a str) -> Vec<StrOrImg> {
+pub async fn empty_resolver<'a, C: Canvas>(s: &'a str) -> Vec<StrOrImg<C>> {
     vec![StrOrImg::Str(s)]
 }
