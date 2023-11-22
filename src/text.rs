@@ -103,21 +103,32 @@ impl<'a> Fonts<'a> {
         &self,
         img: &mut C,
         text: &'b str,
-        scale: Scale,
+        mut scale: Scale,
         color: <C as Canvas>::Pixel,
         width: i32,
-        mut x: i32,
+        x: i32,
         y: i32,
         resolver: impl Fn(&'b str) -> Fut,
         text_size_resolver: impl Fn(&'b str) -> Fut2,
+        shrink: bool,
     ) where
         Fut: Future<Output = Vec<StrOrImg<'a, C>>>,
         Fut2: Future<Output = &'b str>,
         <C as Canvas>::Pixel: Pixel<Subpixel = u8>,
         <C as GenericImageView>::Pixel: 'static,
     {
-        x = x + (width - self.text_size(text, scale, text_size_resolver).await.0) / 2;
-        self.write_to(img, text, scale, color, x, y, resolver).await;
+        let text_size = self.text_size(text, scale, text_size_resolver).await.0;
+        let mut newx = x + (width - text_size) / 2;
+        if newx < x && shrink {
+            let per = width as f32 / text_size as f32;
+            scale = Scale {
+                x: scale.x * per,
+                y: scale.y * per,
+            };
+            newx = x;
+        }
+        self.write_to(img, text, scale, color, newx, y, resolver)
+            .await;
     }
 
     pub async fn write_to<'b, C: Canvas + GenericImage + GenericImageView, Fut>(
@@ -177,4 +188,8 @@ pub enum StrOrImg<'a, C: Canvas> {
 
 pub async fn empty_resolver<'a, C: Canvas>(s: &'a str) -> Vec<StrOrImg<C>> {
     vec![StrOrImg::Str(s)]
+}
+
+pub async fn empty_size_resolver<'a>(s: &'a str) -> &'a str {
+    s
 }

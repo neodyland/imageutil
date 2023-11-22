@@ -1,5 +1,5 @@
 use image::{DynamicImage, Rgba};
-use imageutil::text::{empty_resolver, Fonts};
+use imageutil::text::{empty_resolver, empty_size_resolver, Fonts};
 use once_cell::sync::Lazy;
 use rusttype::{Font, Scale};
 
@@ -13,14 +13,17 @@ async fn main() {
     let fonts = Fonts::new(fonts);
     for _ in 0..100 {
         fonts
-            .write_to(
+            .write_to_middle(
                 &mut img,
                 "hello",
                 Scale::uniform(200.0),
                 Rgba([0, 0, 255, 255]),
+                100,
                 0,
                 0,
                 empty_resolver,
+                empty_size_resolver,
+                true,
             )
             .await;
     }
