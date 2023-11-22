@@ -85,7 +85,7 @@ impl<'a> Fonts<'a> {
         resolver: impl Fn(&'b str) -> Fut,
     ) -> (i32, i32)
     where
-        Fut: Future<Output = &'b str>,
+        Fut: Future<Output = String>,
     {
         let mut width = 0;
         let mut height = 0;
@@ -113,7 +113,7 @@ impl<'a> Fonts<'a> {
         shrink: bool,
     ) where
         Fut: Future<Output = Vec<StrOrImg<'a, C>>>,
-        Fut2: Future<Output = &'b str>,
+        Fut2: Future<Output = String>,
         <C as Canvas>::Pixel: Pixel<Subpixel = u8>,
         <C as GenericImageView>::Pixel: 'static,
     {
@@ -190,6 +190,6 @@ pub async fn empty_resolver<'a, C: Canvas>(s: &'a str) -> Vec<StrOrImg<C>> {
     vec![StrOrImg::Str(s)]
 }
 
-pub async fn empty_size_resolver<'a>(s: &'a str) -> &'a str {
-    s
+pub async fn empty_size_resolver<'a>(s: &'a str) -> String {
+    s.to_string()
 }
