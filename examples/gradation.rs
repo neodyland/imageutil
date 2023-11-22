@@ -1,12 +1,12 @@
 use image::{DynamicImage, Rgba};
-use imageutil::gradiation::{linear_gradient, Gradiation};
+use imageutil::gradiation::{linear_gradient_mut, LinearGradiation};
 
 fn main() {
     let mut img = DynamicImage::new_rgba8(100, 100);
     for _ in 0..100 {
-        linear_gradient(
+        linear_gradient_mut(
             &mut img,
-            &Gradiation {
+            &LinearGradiation {
                 start_color: Rgba([0, 0, 255, 255]),
                 end_color: Rgba([255, 255, 255, 255]),
                 start_point: (0, 0),
@@ -14,4 +14,5 @@ fn main() {
             },
         );
     }
+    img.save("examples/gradation.png").unwrap();
 }
