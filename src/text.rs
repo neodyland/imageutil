@@ -9,15 +9,19 @@ use crate::{canvas::Canvas, util::Mixer};
 
 #[derive(Clone)]
 pub struct Fonts<'a> {
-    fonts: &'a [Font<'a>],
+    fonts: Vec<Font<'a>>,
 }
 
 impl<'a> Fonts<'a> {
-    pub fn new(fonts: &'a [Font<'a>]) -> Self {
+    pub fn new(fonts: Vec<Font<'a>>) -> Self {
         Self { fonts }
     }
-
-    pub fn get_avalible_font(&self, char: char) -> Option<&'a Font<'a>> {
+    pub fn extend(&self, font: Font<'a>) -> Self {
+        let mut fonts = self.fonts.clone();
+        fonts.push(font);
+        Self { fonts }
+    }
+    pub fn get_avalible_font(&self, char: char) -> Option<&Font<'a>> {
         self.fonts
             .iter()
             .find(|f| f.glyph(char).id() != GlyphId(0))

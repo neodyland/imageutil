@@ -9,7 +9,7 @@ const NOTO_SANS_JP: Lazy<Font> =
 #[tokio::main]
 async fn main() {
     let mut img = DynamicImage::new_rgba8(1000, 1000);
-    let fonts = &[NOTO_SANS_JP.clone()];
+    let fonts = vec![NOTO_SANS_JP.clone()];
     let fonts = Fonts::new(fonts);
     for _ in 0..100 {
         fonts
